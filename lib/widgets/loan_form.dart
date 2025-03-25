@@ -26,30 +26,46 @@ class _LoanFormState extends State<LoanForm> {
   int _loanPeriod = 36;
   int _loanAmountResult = 0;
   int _loanPeriodResult = 0;
+  int _originalLoanAmount = 2500;
+  int _originalLoanPeriod = 36;
   String _errorMessage = '';
 
   // Submit the form and update the state with the loan decision results.
   // Only submits if the form inputs are validated.
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      final result = await _apiService.requestLoanDecision(
-          _nationalId, _loanAmount, _loanPeriod);
-      setState(() {
-        int tempAmount = int.parse(result['loanAmount'].toString());
-        int tempPeriod = int.parse(result['loanPeriod'].toString());
+      _originalLoanAmount = _loanAmount;
+      _originalLoanPeriod = _loanPeriod;
 
-        if (tempAmount <= _loanAmount || tempPeriod > _loanPeriod) {
+      final result = await _apiService.requestLoanDecision(
+        _nationalId,
+        _loanAmount,
+        _loanPeriod,
+      );
+
+      setState(() {
+        if (result['errorMessage'] != null && result['errorMessage']
+            .toString()
+            .isNotEmpty) {
+          _errorMessage = result['errorMessage'].toString();
+          _loanAmountResult = 0;
+          _loanPeriodResult = 0;
+        } else {
           _loanAmountResult = int.parse(result['loanAmount'].toString());
           _loanPeriodResult = int.parse(result['loanPeriod'].toString());
-        } else {
-          _loanAmountResult = _loanAmount;
-          _loanPeriodResult = _loanPeriod;
+          _errorMessage = '';
+
+          // ✅ Update slider positions to reflect approved values
+          _loanAmount = _loanAmountResult;
+          _loanPeriod = _loanPeriodResult;
         }
-        _errorMessage = result['errorMessage'].toString();
       });
     } else {
-      _loanAmountResult = 0;
-      _loanPeriodResult = 0;
+      setState(() {
+        _loanAmountResult = 0;
+        _loanPeriodResult = 0;
+        _errorMessage = 'Please check your input values.';
+      });
     }
   }
 
@@ -58,7 +74,10 @@ class _LoanFormState extends State<LoanForm> {
   // when a field is changed.
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery
+        .of(context)
+        .size
+        .width;
     final formWidth = screenWidth / 3;
     const minWidth = 500.0;
     return Expanded(
@@ -80,7 +99,6 @@ class _LoanFormState extends State<LoanForm> {
                             onChanged: (value) {
                               setState(() {
                                 _nationalId = value ?? '';
-                                _submitForm();
                               });
                             },
                           ),
@@ -101,7 +119,6 @@ class _LoanFormState extends State<LoanForm> {
                     onChanged: (double newValue) {
                       setState(() {
                         _loanAmount = ((newValue.floor() / 100).round() * 100);
-                        _submitForm();
                       });
                     },
                   ),
@@ -133,14 +150,13 @@ class _LoanFormState extends State<LoanForm> {
                   Slider.adaptive(
                     value: _loanPeriod.toDouble(),
                     min: 12,
-                    max: 60,
+                    max: 48,
                     divisions: 40,
                     label: '$_loanPeriod months',
                     activeColor: AppColors.secondaryColor,
                     onChanged: (double newValue) {
                       setState(() {
                         _loanPeriod = ((newValue.floor() / 6).round() * 6);
-                        _submitForm();
                       });
                     },
                   ),
@@ -152,7 +168,7 @@ class _LoanFormState extends State<LoanForm> {
                           padding: EdgeInsets.only(left: 12),
                           child: Align(
                               alignment: Alignment.centerLeft,
-                              child: Text('6 months')),
+                              child: Text('12 months')),
                         ),
                       ),
                       Expanded(
@@ -160,7 +176,7 @@ class _LoanFormState extends State<LoanForm> {
                           padding: EdgeInsets.only(right: 12),
                           child: Align(
                             alignment: Alignment.centerRight,
-                            child: Text('60 months'),
+                            child: Text('48 months'),
                           ),
                         ),
                       )
@@ -172,16 +188,42 @@ class _LoanFormState extends State<LoanForm> {
             ),
           ),
           const SizedBox(height: 16.0),
+          ElevatedButton(
+            onPressed: _submitForm,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.secondaryColor,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 32.0, vertical: 12.0),
+            ),
+            child: const Text('Submit Application'),
+          ),
+          const SizedBox(height: 16.0),
+
           Column(
             children: [
-              Text(
-                  'Approved Loan Amount: ${_loanAmountResult != 0 ? _loanAmountResult : "--"} €'),
-              const SizedBox(height: 8.0),
-              Text(
-                  'Approved Loan Period: ${_loanPeriodResult != 0 ? _loanPeriodResult : "--"} months'),
-              Visibility(
-                  visible: _errorMessage != '',
-                  child: Text(_errorMessage, style: errorMedium))
+              if (_errorMessage.isNotEmpty)
+                Text(_errorMessage, style: errorMedium)
+              else
+                if (_loanAmountResult != 0)
+                  Column(
+                    children: [
+                      Text('✅ Approved Loan Amount: $_loanAmountResult €'),
+                      const SizedBox(height: 8.0),
+                      Text('🕒 Approved Loan Period: $_loanPeriodResult months'),
+                      if (_loanAmountResult != _originalLoanAmount ||
+                          _loanPeriodResult != _originalLoanPeriod)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6.0),
+                          child: Text(
+                            'Note: Your request was adjusted for approval.',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.orange),
+                          ),
+                        ),
+                    ],
+                  )
+                else
+                  const Text('Awaiting input...'),
             ],
           ),
         ],
