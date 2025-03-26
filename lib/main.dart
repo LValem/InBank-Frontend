@@ -19,7 +19,7 @@ class InBankForm extends StatefulWidget {
 }
 
 class _InBankFormState extends State<InBankForm> {
-  String _selectedCountry = 'estonia';
+  String _selectedCountry = 'ESTONIA';
 
   void _updateCountry(String country) {
     setState(() {
@@ -65,11 +65,11 @@ class _InBankFormState extends State<InBankForm> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildFlagButton('estonia', '🇪🇪'),
+                      _buildFlagButton('ESTONIA', '🇪🇪'),
                       const SizedBox(width: 12),
-                      _buildFlagButton('latvia', '🇱🇻'),
+                      _buildFlagButton('LATVIA', '🇱🇻'),
                       const SizedBox(width: 12),
-                      _buildFlagButton('lithuania', '🇱🇹'),
+                      _buildFlagButton('LITHUANIA', '🇱🇹'),
                     ],
                   ),
                   const SizedBox(height: 24),
